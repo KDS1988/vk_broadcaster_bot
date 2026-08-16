@@ -1,0 +1,49 @@
+name: Create VK broadcasts for a date
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Дата матчей в формате ДД.ММ.ГГГГ (как в колонке "Дата" листа Calendar)'
+        required: true
+        type: string
+  # Необязательно: автозапуск по расписанию на "завтра". Раскомментируй,
+  # если хочешь, чтобы это происходило само по себе, а не только по кнопке.
+  # schedule:
+  #   - cron: '0 18 * * 5'  # пятница 18:00 UTC — под своё время подставь
+
+jobs:
+  create-broadcasts:
+    # self-hosted, не ubuntu-latest — иначе каждый прогон новый IP, и VK
+    # будет чаще просить подтверждение входа
+    runs-on: self-hosted
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          playwright install chromium
+
+      - name: Decode Google service account key
+        run: echo "${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON_B64 }}" | base64 -d > service_account.json
+
+      - name: Run bot
+        env:
+          VK_STATE_PATH: /opt/vk-bot/vk_storage_state.json
+          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+          WORKSHEET_NAME: Calendar
+          # workflow_dispatch.inputs.date — та самая "кнопка": на какую
+          # дату жмёшь "Run workflow", те матчи и создаются
+          TARGET_DATE: ${{ inputs.date }}
+        run: python vk_broadcast_bot.py
+
+      - name: Clean up secrets from workspace
+        if: always()
+        run: rm -f service_account.json
