@@ -24,30 +24,34 @@ jobs:
       # actions/setup-python убран: на self-hosted раннере он пытается
       # создать кэш инструментов по пути /Users/runner/... (захардкожен
       # для облачных macOS-раннеров) и падает с Permission denied, т.к.
-      # реальный пользователь другой. Python уже стоит на самой машине
-      # (ставили вручную на этапе настройки раннера) — используем его
-      # напрямую через python3/pip3.
+      # реальный пользователь другой.
+      #
+      # Используем venv в ~/vk-bot/venv (вне рабочей папки репозитория,
+      # чтобы actions/checkout его не стирал при следующем чекауте) —
+      # системный Homebrew Python на macOS блокирует pip install напрямую
+      # (PEP 668 externally-managed-environment), venv это обходит.
+      # Один раз перед первым запуском на самой машине:
+      #   python3 -m venv ~/vk-bot/venv
+      #   source ~/vk-bot/venv/bin/activate
+      #   pip install -r requirements.txt && playwright install chromium
 
       - name: Install dependencies
         run: |
-          pip3 install -r requirements.txt
-          python3 -m playwright install chromium
+          /Users/dkorneev/vk-bot/venv/bin/pip install -r requirements.txt
+          /Users/dkorneev/vk-bot/venv/bin/python -m playwright install chromium
 
       - name: Decode Google service account key
         run: echo "${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON_B64 }}" | base64 -d > service_account.json
 
       - name: Run bot
         env:
-          # Путь вне git-рабочей папки, в домашней директории — /opt
-          # на macOS не существует по умолчанию и требует sudo. Подставь
-          # свой реальный путь, если клал файл сессии в другое место.
           VK_STATE_PATH: /Users/dkorneev/vk-bot/vk_storage_state.json
           SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
           WORKSHEET_NAME: Calendar
           # workflow_dispatch.inputs.date — та самая "кнопка": на какую
           # дату жмёшь "Run workflow", те матчи и создаются
           TARGET_DATE: ${{ inputs.date }}
-        run: python3 vk_broadcast_bot.py
+        run: /Users/dkorneev/vk-bot/venv/bin/python vk_broadcast_bot.py
 
       - name: Clean up secrets from workspace
         if: always()
