@@ -18,13 +18,12 @@ capture_session.py
     playwright install chromium
 """
 import asyncio
+import os
 from playwright.async_api import async_playwright
 
-STATE_FILE = "vk_storage_state.json"
+STATE_FILE = os.environ.get("VK_STATE_PATH", "vk_storage_state.json")
 
-# TODO: подставь реальный адрес раздела трансляций своего сообщества.
-# Обычно это что-то вроде https://vk.com/video?act=live_settings&gid=<ID сообщества без минуса>
-COMMUNITY_LIVE_URL = "https://vk.com/video?act=live_settings&gid=YOUR_GROUP_ID"
+COMMUNITY_LIVE_URL = "https://vkvideo.ru/@club226850050/lives"
 
 
 async def main():
