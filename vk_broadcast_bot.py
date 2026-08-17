@@ -126,16 +126,25 @@ def write_result(ws, row_index: int, key: str, link: str):
 # ---------------------------------------------------------------- VK FLOW
 
 async def create_broadcast(page, title: str) -> dict:
-    await page.goto(COMMUNITY_URL)
+    await page.goto(COMMUNITY_URL, wait_until="domcontentloaded", timeout=60000)
     await page.wait_for_timeout(1500)
 
-    await page.get_by_role("button", name="Добавить", exact=True).first.click()
-    await page.get_by_text("Начать трансляцию", exact=True).click()
-    await page.get_by_text("Приложение", exact=True).click()
-    await page.get_by_role("button", name="Продолжить").click()
+    try:
+        await page.get_by_role("button", name="Добавить", exact=True).first.click()
+        await page.get_by_text("Начать трансляцию", exact=True).click()
+        await page.get_by_text("Приложение", exact=True).click()
+        await page.get_by_role("button", name="Продолжить").click()
 
-    await page.get_by_placeholder("Например, «Смотрю фильмы всю ночь»").fill(title)
-    await page.get_by_role("tab", name="Спорт").click()
+        await page.get_by_placeholder("Например, «Смотрю фильмы всю ночь»").fill(title)
+        await page.get_by_role("tab", name="Спорт").click()
+    except Exception:
+        debug_path = f"debug_error_{int(asyncio.get_event_loop().time())}.png"
+        try:
+            await page.screenshot(path=debug_path)
+            log.error("Шаг создания не прошёл — скриншот сохранён в %s", debug_path)
+        except Exception:
+            pass
+        raise
 
     # Обложка — best-effort, не проверено живьём (см. шапку файла)
     if COVER_FILE.exists():
@@ -180,7 +189,12 @@ async def run():
         return
 
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
+        # headless=False — все наши успешные тесты создания трансляций были
+        # в видимом окне; headless-Chromium VK может показывать иначе
+        # (антибот-проверку вместо обычной формы). Раннер — эта же машина
+        # с активной GUI-сессией, так что видимое окно во время
+        # автозапуска — нормально.
+        browser = await p.chromium.launch(headless=False)
         context = await browser.new_context(storage_state=STATE_FILE)
 
         for m in pending:
