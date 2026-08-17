@@ -33,11 +33,11 @@ async def main():
         context = await browser.new_context()
         page = await context.new_page()
 
-        await page.goto("https://vk.com")
+        await page.goto("https://vkvideo.ru", wait_until="domcontentloaded", timeout=60000)
         print("1. Залогинься в VK в открывшемся окне (включая любые проверки, если попросит).")
         input("   Когда увидишь свою ленту/профиль — вернись сюда и нажми Enter...")
 
-        await page.goto(COMMUNITY_LIVE_URL)
+        await page.goto(COMMUNITY_LIVE_URL, wait_until="domcontentloaded", timeout=60000)
         print("2. Проверь, что открылась именно страница управления трансляциями сообщества.")
         input("   Если всё ок — нажми Enter, чтобы сохранить сессию...")
 
