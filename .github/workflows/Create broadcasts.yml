@@ -21,28 +21,33 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+      # actions/setup-python убран: на self-hosted раннере он пытается
+      # создать кэш инструментов по пути /Users/runner/... (захардкожен
+      # для облачных macOS-раннеров) и падает с Permission denied, т.к.
+      # реальный пользователь другой. Python уже стоит на самой машине
+      # (ставили вручную на этапе настройки раннера) — используем его
+      # напрямую через python3/pip3.
 
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
-          playwright install chromium
+          pip3 install -r requirements.txt
+          python3 -m playwright install chromium
 
       - name: Decode Google service account key
         run: echo "${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON_B64 }}" | base64 -d > service_account.json
 
       - name: Run bot
         env:
-          VK_STATE_PATH: /opt/vk-bot/vk_storage_state.json
+          # Путь вне git-рабочей папки, в домашней директории — /opt
+          # на macOS не существует по умолчанию и требует sudo. Подставь
+          # свой реальный путь, если клал файл сессии в другое место.
+          VK_STATE_PATH: /Users/dkorneev/vk-bot/vk_storage_state.json
           SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
           WORKSHEET_NAME: Calendar
           # workflow_dispatch.inputs.date — та самая "кнопка": на какую
           # дату жмёшь "Run workflow", те матчи и создаются
           TARGET_DATE: ${{ inputs.date }}
-        run: python vk_broadcast_bot.py
+        run: python3 vk_broadcast_bot.py
 
       - name: Clean up secrets from workspace
         if: always()
