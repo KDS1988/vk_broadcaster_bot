@@ -140,7 +140,10 @@ async def create_broadcast(page, title: str) -> dict:
     await page.wait_for_timeout(1500)
 
     try:
-        await page.get_by_text("Приложение", exact=True).click()
+        # Deep-link с chosenOwnerId=...&z=onboarding_live_flow ведёт сразу
+        # на экран "Новая трансляция" (одноразовый/постоянный ключ) —
+        # промежуточный выбор "Веб-камера/Демонстрация экрана/Приложение"
+        # тут не показывается, шаг клика по "Приложение" не нужен.
         await page.get_by_role("button", name="Продолжить").click()
 
         await page.get_by_placeholder("Например, «Смотрю фильмы всю ночь»").fill(title)
