@@ -60,6 +60,7 @@ WORKSHEET_NAME = os.environ.get("WORKSHEET_NAME", "Calendar")
 TARGET_DATE = os.environ["TARGET_DATE"]  # формат ДД.ММ.ГГГГ, как в колонке "Дата" — это и есть "кнопка": какую дату передашь, те матчи и создаст
 
 COMMUNITY_URL = "https://vkvideo.ru/@club226850050/lives"
+COMMUNITY_OWNER_ID = "-226850050"  # ID сообщества (с минусом) — используется в deep-link ниже
 COVER_FILE = Path(__file__).parent / "bg.png"
 
 # Колонки листа Calendar (A=1)
@@ -126,12 +127,19 @@ def write_result(ws, row_index: int, key: str, link: str):
 # ---------------------------------------------------------------- VK FLOW
 
 async def create_broadcast(page, title: str) -> dict:
-    await page.goto(COMMUNITY_URL, wait_until="domcontentloaded", timeout=60000)
+    # Идём сразу по прямой ссылке с явным ID сообщества, а не через клик
+    # "Добавить" -> "Начать трансляцию" — на странице минимум две кнопки
+    # с текстом "Добавить" (своя у сообщества и общая в шапке сайта,
+    # которая ведёт на личный профиль), и в автоматическом запуске
+    # клик иногда попадал не туда. Этот URL — то, куда сам VK
+    # переходит после клика "Начать трансляцию" (подсмотрено в адресной
+    # строке во время ручного теста), так что chosenOwnerId однозначно
+    # фиксирует нужное сообщество.
+    live_flow_url = f"{COMMUNITY_URL}?chosenOwnerId={COMMUNITY_OWNER_ID}&z=onboarding_live_flow"
+    await page.goto(live_flow_url, wait_until="domcontentloaded", timeout=60000)
     await page.wait_for_timeout(1500)
 
     try:
-        await page.get_by_role("button", name="Добавить", exact=True).first.click()
-        await page.get_by_text("Начать трансляцию", exact=True).click()
         await page.get_by_text("Приложение", exact=True).click()
         await page.get_by_role("button", name="Продолжить").click()
 
